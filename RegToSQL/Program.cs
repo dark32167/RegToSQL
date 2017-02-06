@@ -66,19 +66,19 @@ namespace RegToSQL
             var transaction = conn.BeginTransaction();
 
             RegistryKey Reg = Registry.ClassesRoot;
-            InsertTree(1, Reg);
+            InsertTree(0,count, Reg);
 
             Reg = Registry.CurrentUser;
-            InsertTree(1, Reg);
+            InsertTree(0, count, Reg);
 
             Reg = Registry.LocalMachine;
-            InsertTree(1, Reg);
+            InsertTree(0, count, Reg);
 
             Reg = Registry.Users;
-            InsertTree(1, Reg);
+            InsertTree(0, count, Reg);
 
             Reg = Registry.CurrentConfig;
-            InsertTree(1, Reg);
+            InsertTree(0, count, Reg);
 
             transaction.Commit();
             conn.Close();
@@ -95,13 +95,20 @@ namespace RegToSQL
         }
 
         //Вставка ветвей реестра
-        static void InsertTree(int parent_id, RegistryKey thisKey)
+        static void InsertTree(int parent_id, int id, RegistryKey thisKey)
         {
+            int thisKeyID = id;
+
             List<String> tmp = new List<string>(thisKey.Name.Split('\\'));
             String name = tmp.Last();
 
 
             SQLiteParameter param = new SQLiteParameter();
+            param.ParameterName = "id";
+            param.Value = thisKeyID;
+            cmdToReg.Parameters.Add(param);
+
+            param = new SQLiteParameter();
             param.ParameterName = "@parent_id";
             param.Value = parent_id;
             cmdToReg.Parameters.Add(param);
@@ -115,15 +122,14 @@ namespace RegToSQL
             {
                 cmdToReg.ExecuteNonQuery();
 
-                count++;
-                int thisKeyID = count;
+                count++;                
 
                 InsertValue(thisKeyID, thisKey);
 
                 //рекурсивное составление ветки
                 foreach (var item in thisKey.GetSubKeyNames())
                 {
-                    InsertTree(thisKeyID, thisKey.OpenSubKey(item));
+                    InsertTree(thisKeyID, count, thisKey.OpenSubKey(item));
                 }
             }
             catch (Exception ex) 
